@@ -1,0 +1,71 @@
+#include<iostream>
+using namespace std;
+#include "./gdal/gdal_priv.h"
+#pragma comment(lib, "gdal_i.lib")
+
+
+int main()
+{
+	//定义两个GDALDataset型指针
+	GDALDataset * poSrcDS_1;
+	GDALDataset * poSrcDS_2;
+	GDALDataset * poDstDS_1;
+
+	int imgXlen_1, bandNum_1, imgYlen_1, imgXlen_2, bandNum_2, imgYlen_2;
+	const char * srcPath_1 = "space.jpg";  //加"const"
+	const char * srcPath_2 = "superman.jpg";  //加"const"
+	const char * dstPath_1 = "ShaBi.tif";  //加"const”
+	GByte * buffTmp_1;
+	GByte * buffTmp_2;
+	GByte * buffTmp_3;
+	GByte * buffTmp_4;
+	GByte * buffTmp;
+	int i, j, t;
+
+	GDALAllRegister();   //注册驱动
+
+						 //指定poSrDS来源，属性为只读
+	poSrcDS_1 = (GDALDataset *)GDALOpenShared(srcPath_1, GA_ReadOnly);
+	poSrcDS_2 = (GDALDataset *)GDALOpenShared(srcPath_2, GA_ReadOnly);
+	imgXlen_1 = poSrcDS_1->GetRasterXSize();
+	imgYlen_1 = poSrcDS_1->GetRasterYSize();
+	bandNum_1 = poSrcDS_1->GetRasterCount();
+	imgXlen_2 = poSrcDS_2->GetRasterXSize();
+	imgYlen_2 = poSrcDS_2->GetRasterYSize();
+	bandNum_2 = poSrcDS_2->GetRasterCount();
+
+	buffTmp_1 = (GByte*)CPLMalloc(imgXlen_1*imgYlen_1 * sizeof(GByte));
+	buffTmp_2 = (GByte*)CPLMalloc(imgXlen_2*imgYlen_2 * sizeof(GByte));
+	buffTmp_3 = (GByte*)CPLMalloc(imgXlen_1*imgYlen_1 * sizeof(GByte));
+	buffTmp_4 = (GByte*)CPLMalloc(imgXlen_2*imgYlen_2 * sizeof(GByte));
+	buffTmp = (GByte*)CPLMalloc(imgXlen_2*imgYlen_2 * sizeof(GByte));
+	poDstDS_1 = GetGDALDriverManager()->GetDriverByName("GTiff")->Create(dstPath_1, imgXlen_1, imgYlen_1, bandNum_1, GDT_Byte, NULL);
+	poSrcDS_2->GetRasterBand(1)->RasterIO(GF_Read, 0, 0, imgXlen_2, imgYlen_2, buffTmp_2, imgXlen_2, imgYlen_2, GDT_Byte, 0, 0);
+	poSrcDS_2->GetRasterBand(2)->RasterIO(GF_Read, 0, 0, imgXlen_2, imgYlen_2, buffTmp_3, imgXlen_2, imgYlen_2, GDT_Byte, 0, 0);
+	poSrcDS_2->GetRasterBand(3)->RasterIO(GF_Read, 0, 0, imgXlen_2, imgYlen_2, buffTmp_4, imgXlen_2, imgYlen_2, GDT_Byte, 0, 0);
+	for (t = 0; t < bandNum_2; t++) {
+		poSrcDS_1->GetRasterBand(t + 1)->RasterIO(GF_Read, 0, 0, imgXlen_1, imgYlen_1, buffTmp_1, imgXlen_1, imgYlen_1, GDT_Byte, 0, 0);
+		poSrcDS_2->GetRasterBand(t + 1)->RasterIO(GF_Read, 0, 0, imgXlen_1, imgYlen_1, buffTmp, imgXlen_1, imgYlen_1, GDT_Byte, 0, 0);
+			for (j = 0; j < imgYlen_2; j++) {
+				for (i = 0; i < imgXlen_2; i++) {
+					if (buffTmp_2[j*imgXlen_2 + i] > 10 && buffTmp_2[j*imgXlen_2 + i] < 160 && buffTmp_3[j*imgXlen_2 + i] > 100 && buffTmp_3[j*imgXlen_2 + i] < 220 && buffTmp_4[j*imgXlen_2 + i] > 10 && buffTmp_4[j*imgXlen_2 + i] < 110)
+						;
+					else buffTmp_1[j*imgXlen_1 + i] = buffTmp[j*imgXlen_1 + i];   
+				}
+			}
+		poDstDS_1->GetRasterBand(t + 1)->RasterIO(GF_Write, 0, 0, imgXlen_1, imgYlen_1, buffTmp_1, imgXlen_1, imgYlen_1, GDT_Byte, 0, 0);
+	}
+
+	printf("Mission1 Finished!\n\n");
+	CPLFree(buffTmp_1);
+	CPLFree(buffTmp_2);
+	CPLFree(buffTmp_3);
+	CPLFree(buffTmp_4);
+	CPLFree(buffTmp);
+	GDALClose(poDstDS_1);
+	GDALClose(poSrcDS_1);
+	GDALClose(poSrcDS_2);
+	system("PAUSE");
+	return 0;
+}
+
